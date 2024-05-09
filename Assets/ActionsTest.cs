@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,21 +9,76 @@ using UnityEngine.UI;
 public class ActionsTest : MonoBehaviour
 {
     public GameObject mover = null;
+
+    List<GameObject> moverCloneList = new List<GameObject>();
     // Start is called before the first frame update
     void Start()
     {
         CreateBtns();
 
         transform.Find("ButtonStop").GetComponent<Button>().onClick.AddListener(() => {
-            if (mover == null) return;
-            ActionManager.Instance.StopAction(mover);
+            OnStop();
         });
+
+        transform.Find("ButtonEase").GetComponent<Button>().onClick.AddListener(() => {
+            OnStop();
+            EaseTest();
+        });
+
+    }
+
+    void OnStop()
+    {
+        if (mover == null) return;
+        ActionManager.Instance.StopAction(mover);
+        foreach (var item in moverCloneList)
+        {
+            ActionManager.Instance.StopAction(item);
+        }
+    }
+
+    void EaseTest()
+    {
+        if (mover == null) return;
+        ResetMover();
+
+        List<string> easeFuncNameList = ActionBase.GetEaseFuncNameList();
+        Vector3 offset = new Vector3(-8,0,0);  
+        for (int i = 0; i < easeFuncNameList.Count; i++) 
+        {
+            string easeFuncName = easeFuncNameList[i];
+            GameObject tempMover = Instantiate(mover);
+            moverCloneList.Add(tempMover);  
+            tempMover.transform.SetParent(mover.transform.parent, false);
+            tempMover.transform.position = offset *( i + 1);
+
+            var baseMove = new MoveBy(new Vector3(0, 0, 20), 1.0f);
+            Type moveType = typeof(MoveTo);
+            MethodInfo mInfo = moveType.GetMethod(easeFuncName);
+            if (mInfo!=null) 
+            {
+                baseMove = (MoveBy)mInfo.Invoke(baseMove, null);
+            }
+            baseMove.Run(tempMover);
+        }
+        // reflection for test
+        // you can use easily as
+        // new MoveBy(new Vector3(0, 0, 20), 1.0f).EaseInSine().Run(mover)
+
+        new MoveBy(new Vector3(0, 0, 20), 1.0f).Run(mover);
     }
     void ResetMover()
     {
         mover.transform.position = Vector3.zero;
         mover.transform.rotation = Quaternion.identity;
-        mover.transform.localScale = Vector3.one;   
+        mover.transform.localScale = Vector3.one;
+
+        foreach (var item in moverCloneList)
+        {
+            Destroy(item);
+        }
+        moverCloneList.Clear();
+
     }
     public GameObject ScrollContent;
 
@@ -92,7 +148,7 @@ public class ActionsTest : MonoBehaviour
             {
                 new RotateTo(new Vector3(0, 90, 90), 1.0f),
                 new RotateTo(new Vector3(0, 0, 0), 1.0f) ,
-            }),2);
+            }),-1);
         });
 
         for (int i = 0; i < btnNameList.Count; i++)
@@ -107,8 +163,8 @@ public class ActionsTest : MonoBehaviour
 
             btn.GetComponent<Button>().onClick.AddListener(() => {
                 if (mover == null) return;
-           
-                ActionManager.Instance.StopAction(mover);
+
+                OnStop();
                 ResetMover();
 
                 var btnAction = actionCreaterList[btnIndex].Invoke();

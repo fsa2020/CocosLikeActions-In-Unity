@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.ConstrainedExecution;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -101,9 +102,9 @@ public abstract class ActionBase
         onFinish?.Invoke();
     }
 
-    public ActionBase EaseInQuad() 
+    public ActionBase EaseInQuad()
     {
-        easeFunc = (p) =>{ return p*p; };
+        easeFunc = (p) => { return p * p; };
         return this;
     }
     public ActionBase EaseOutQuad()
@@ -113,14 +114,72 @@ public abstract class ActionBase
     }
     public ActionBase EaseInOutQuad()
     {
-        easeFunc = (p) => 
-        { 
-            if(p<0.5) return 2 * p * p;
-            else      return (-2 * p * p) + (4 * p) - 1;
+        easeFunc = (p) =>
+        {
+            if (p < 0.5f) return 2 * p * p;
+            else return (-2 * p * p) + (4 * p) - 1;
         };
         return this;
     }
 
+    public ActionBase EaseInCubic()
+    {
+        easeFunc = (p) => { return p * p * p; };
+        return this;
+    }
+
+    public ActionBase EaseOutCubic()
+    {
+        easeFunc = (p) => { return 1 - Mathf.Pow(1 - p, 3); };
+        return this;
+    }
+
+    public ActionBase EaseInOutCubic()
+    {
+        easeFunc = (p) =>
+        {
+            if (p < 0.5f) return 4 * p * p * p;
+            else return 1 - Mathf.Pow(-2 * p + 2, 3) / 2f;
+        };
+        return this;
+    }
+
+    public ActionBase EaseInSine()
+    {
+        easeFunc = (p) => { return 1 - Mathf.Cos(p * Mathf.PI / 2); };
+        return this;
+    }
+
+    public ActionBase EaseOutSine()
+    {
+        easeFunc = (p) => { return Mathf.Sin(p * Mathf.PI / 2); };
+        return this;
+    }
+
+    public ActionBase EaseInOuSinet()
+    {
+        easeFunc = (p) => { return -0.5f * (Mathf.Cos(Mathf.PI * p) - 1); };
+        return this;
+    }
+
+    static public List<string> GetEaseFuncNameList() 
+    {
+        List<string> list = new List<string>();
+        // 获取公共非静态的方法
+        MethodInfo[] methods = typeof(ActionBase).GetMethods(BindingFlags.Public | BindingFlags.Instance);
+
+        foreach (MethodInfo method in methods)
+        {
+            // 检查方法是否是缓动函数
+            // 假设缓动函数是以 "Ease" 开头的公共方法
+            // !method.IsSpecialName 表示不是由编译器自动生成的特殊方法，也即是自定义的方法
+            if (method.Name.StartsWith("Ease") && !method.IsSpecialName && method.ReturnType == typeof(ActionBase))
+            {
+                list.Add(method.Name);
+            }
+        }
+        return list;
+    }
 
 }
 public class MoveTo:ActionBase
